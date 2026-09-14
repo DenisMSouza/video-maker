@@ -1,0 +1,85 @@
+{
+  "$schema": "./schema.json",
+  "id": "exemplo",
+  "title": "Ambiente de geração de vídeo",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "durationInSeconds": 12,
+  "palette": {
+    "background": "#07111F",
+    "primary": "#5EEAD4",
+    "secondary": "#818CF8",
+    "text": "#F8FAFC",
+    "muted": "#CBD5E1"
+  },
+  "audio": {
+    "narration": "audio/narracao.mp3",
+    "music": "audio/musica.mp3",
+    "musicVolume": 0.15,
+    "mixed": "audio/mix/exemplo.mp3",
+    "sfx": [
+      {
+        "file": "audio/sfx/whoosh.mp3",
+        "atSeconds": 4,
+        "volume": 0.35
+      },
+      {
+        "file": "audio/sfx/whoosh.mp3",
+        "atSeconds": 8,
+        "volume": 0.35
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "id": "roteiro",
+      "name": "Roteiro",
+      "durationInSeconds": 4,
+      "narration": "O grok bot entrega o roteiro em JSON, com cenas, tempos e narração.",
+      "visual": "Tela de abertura com tipografia grande e acento teal.",
+      "title": "O grok bot escreve o roteiro",
+      "subtitle": "Cenas, timings, narração e paleta chegam prontos em um spec JSON.",
+      "animation": {
+        "enter": "slide-up",
+        "exit": "fade"
+      }
+    },
+    {
+      "id": "ambiente",
+      "name": "Ambiente",
+      "durationInSeconds": 4,
+      "narration": "Clipe de movimento entra como fundo da cena.",
+      "visual": "Pessoa ou produto em movimento, gerado fora deste repo.",
+      "video": {
+        "file": "clips/demo-movimento.mp4",
+        "muted": true,
+        "fit": "cover"
+      },
+      "title": "O clipe entra na cena",
+      "subtitle": "HeyGen, Kling, Sora ou filmagem: o MP4 vai em public/clips.",
+      "animation": {
+        "enter": "fade",
+        "exit": "fade"
+      }
+    },
+    {
+      "id": "render",
+      "name": "Render",
+      "durationInSeconds": 4,
+      "narration": "Produto em movimento, com título e mix por cima.",
+      "visual": "Clipe de produto com overlay de texto.",
+      "video": {
+        "file": "clips/demo-produto.mp4",
+        "muted": true,
+        "fit": "cover"
+      },
+      "title": "Produto em movimento",
+      "subtitle": "O Remotion só empilha legenda, mix e o MP4 final.",
+      "animation": {
+        "enter": "fade",
+        "exit": "fade"
+      }
+    }
+  ]
+}
