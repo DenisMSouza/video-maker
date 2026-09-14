@@ -1,62 +1,102 @@
 # Video Maker
 
-Ambiente de geração de vídeo com [Remotion](https://www.remotion.dev) e [ffmpeg](https://ffmpeg.org), seguindo o fluxo do [guia Remotion + Claude](https://cdn.juliaperisse.com.br/guia_remotion_claude.pdf).
+Ambiente de render com [Remotion](https://www.remotion.dev) e [ffmpeg](https://ffmpeg.org).
 
-O **grok bot** escreve o roteiro (JSON), os prompts e a parte de agentes. Este repositório recebe esse material, pré-visualiza no Studio e renderiza o MP4.
+O **grok bot não gera o MP4**. Ele entrega um roteiro JSON e os arquivos de mídia. Este repositório valida, pré-visualiza e renderiza.
 
-## O que este repo cobre
+## O que o grok bot faz
 
-| Etapa do guia | Responsável |
-| --- | --- |
-| 01 Pesquisa visual | grok bot |
-| 02 Roteiro | grok bot (gera o spec JSON) |
-| 03 Imagens e clipes | grok bot (`public/assets` e `public/clips`) |
-| 04 Instalação | este repo (Remotion + ffmpeg) |
-| 05 Código / preview | este repo (composition a partir do spec) |
-| 06 Áudio | este repo (`npm run mix` com ffmpeg) |
-| 07 Render | este repo (`npm run render`) |
+1. Escolhe um `id` só com letras, números e hífen (`meu-video`).
+2. Escreve `public/specs/{id}.json` no schema `public/specs/schema.json`. O campo `id` **tem que ser igual** ao nome do arquivo.
+3. Coloca a mídia em `public/`, com caminhos relativos a `public/` no JSON:
+   - clipe de pessoa/produto falando → `public/clips/`
+   - still → `public/assets/`
+   - narração, música, sfx → `public/audio/`
+4. Gera os clipes de movimento **fora daqui** (HeyGen, Kling, Sora, filmagem). Este repo não chama nenhuma API de vídeo.
+5. Roda `npm run validate {id}` e corrige avisos de arquivo faltando.
 
-## Requisitos
-
-- Node.js LTS (já testado com v23)
-- ffmpeg e ffprobe no PATH (já testado com ffmpeg 8.1)
+Ele **não** escreve TSX Remotion, **não** edita `src/` e **não** precisa rodar o Studio. Mix e render ficam com este ambiente:
 
 ```bash
-npm install
-npm run check
-npm run validate
-npm run dev
+npm run mix {id}
+npm run render {id}    # sai em out/{id}.mp4
 ```
 
-O Studio abre em `http://localhost:3000`. A composition `exemplo` já entra no preview.
+## O que cada campo vira na tela
 
-## Estrutura
+| Campo | Aparece no vídeo? | Uso |
+| --- | --- | --- |
+| `scenes[].title` | sim | título grande |
+| `scenes[].subtitle` | sim | texto menor abaixo do título |
+| `scenes[].name` | sim | rótulo no topo (`01  ROTEIRO`) |
+| `scenes[].video` | sim | fundo em movimento; ganha de `image` |
+| `scenes[].image` | sim | fundo estático se não houver `video` |
+| `scenes[].background` / `palette` | sim | cores se não houver mídia |
+| `scenes[].animation` | sim | `fade`, `slide-up`, `scale`, `none` |
+| `scenes[].narration` | não | texto da fala; o áudio real é o MP3 |
+| `scenes[].visual` | não | nota de direção; o renderer ignora |
 
-```text
-public/
-  assets/          imagens estáticas das cenas
-  clips/           MP4s gerados fora (pessoa falando, produto, etc.)
-  audio/           narracao.mp3, musica.mp3, sfx/
-  audio/mix/       saída do ffmpeg (gerada)
-  specs/           roteiros JSON do grok bot
-  specs/schema.json
+Sem `video` e sem `image`, a cena vira só tipografia no fundo da paleta.
+
+## Regras de mídia
+
+- Caminhos: `clips/pessoa.mp4`, `assets/cena-01.png`, `audio/narracao.mp3`. Nunca use `public/` no JSON.
+- Nome sugerido: `clips/{id}-01.mp4`, `assets/{id}-01.png`.
+- Resolução padrão do spec: `1920x1080`, `fps: 30`.
+- O clipe deve durar **no mínimo** `durationInSeconds` da cena. Se for mais curto, o último frame congela.
+- A duração do vídeo final é a **soma das cenas**, não `durationInSeconds` do root (esse campo é só documentação).
+
+Fala — escolha um caminho só:
+
+- Clipe já tem a voz → `"muted": false` e **não** coloque `audio.narration`.
+- Voz em `audio/narracao.mp3` → `"muted": true` no clipe.
+
+`audio.mixed` é saída do `npm run mix` (`audio/mix/{id}.mp3`). O grok bot não precisa gerar esse arquivo. Se ele existir, o Remotion usa o mix e ignora narração+música soltas.
+
+## Spec mínimo
+
+Copie `public/specs/exemplo.json` ou parta disto:
+
+```json
+{
+  "$schema": "./schema.json",
+  "id": "meu-video",
+  "title": "Título interno",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "palette": {
+    "background": "#07111F",
+    "primary": "#5EEAD4",
+    "secondary": "#818CF8",
+    "text": "#F8FAFC",
+    "muted": "#CBD5E1"
+  },
+  "audio": {
+    "music": "audio/musica.mp3",
+    "musicVolume": 0.15
+  },
+  "scenes": [
+    {
+      "id": "abertura",
+      "name": "Abertura",
+      "durationInSeconds": 5,
+      "title": "Texto na tela",
+      "subtitle": "Linha de apoio",
+      "video": {
+        "file": "clips/meu-video-01.mp4",
+        "muted": false,
+        "fit": "cover"
+      },
+      "animation": { "enter": "fade", "exit": "fade" }
+    }
+  ]
+}
 ```
 
-Caminhos de mídia no JSON são relativos a `public/`. Exemplo: `assets/cena-01.png` e `audio/narracao.mp3`.
+`video` também aceita só o caminho: `"video": "clips/meu-video-01.mp4"`.
 
-## Contrato do grok bot
-
-Cada vídeo é um arquivo `public/specs/{id}.json`. O `id` precisa ser igual ao nome do arquivo e só pode ter letras, números e hífen.
-
-O schema está em `public/specs/schema.json`. Campos principais:
-
-- `palette` — cores do vídeo
-- `scenes[]` — nome, duração, narração, `video` e/ou `image`, título, animação
-- `audio` — narração, música (volume padrão 15%), sfx com timestamp
-
-Prioridade da cena: **clipe de vídeo** > imagem > fundo gráfico.
-
-`video` pode ser um caminho (`"clips/pessoa.mp4"`) ou um objeto:
+Objeto completo do clipe:
 
 ```json
 "video": {
@@ -68,34 +108,34 @@ Prioridade da cena: **clipe de vídeo** > imagem > fundo gráfico.
 }
 ```
 
-A geração do clipe (pessoa falando, produto na mão) acontece **fora daqui** — HeyGen, Kling, Sora, filmagem, etc. Este repo só empilha o clipe, a legenda e o áudio. Se o clipe já tem a fala, use `muted: false` e não empilhe outra narração. Se a fala vai no `audio.narration`, marque `muted: true`.
+Schema oficial: `public/specs/schema.json`. Cada JSON em `public/specs/{id}.json` vira uma composition com o mesmo `id` no Studio.
 
-O clipe deve durar pelo menos o `durationInSeconds` da cena; se for mais curto, o último frame fica congelado.
+## Estrutura
 
-Animações suportadas: `fade`, `slide-up`, `scale`, `none`. `kenBurns` vale quando a cena tem imagem (não se aplica ao clipe).
+```text
+public/
+  specs/{id}.json     roteiro do grok bot
+  specs/schema.json   contrato
+  clips/              MP4s de pessoa/produto
+  assets/             stills
+  audio/              narracao, musica, sfx
+  audio/mix/          gerado pelo npm run mix
+out/{id}.mp4          gerado pelo npm run render
+```
 
-Fluxo esperado do grok bot:
-
-1. Gerar o spec JSON
-2. Gerar os clipes de movimento na ferramenta de vídeo e gravar em `public/clips`
-3. Opcionalmente colocar stills em `public/assets`
-4. Colocar `narracao.mp3`, música e sfx em `public/audio`
-5. Rodar `npm run validate {id}`
-6. Preview no Studio e, se estiver ok, `npm run mix {id}` e `npm run render {id}`
-
-## Comandos
+## Ambiente local
 
 ```bash
-npm run dev                  # Remotion Studio
-npm run validate             # valida todos os specs
-npm run validate exemplo     # valida um spec
-npm run mix exemplo          # mistura narração + música + sfx
-npm run render exemplo       # gera out/exemplo.mp4
-npm run compress out/exemplo.mp4 youtube
+npm install
+npm run check
+npm run validate
+npm run dev                 # http://localhost:3000
+npm run mix exemplo
+npm run render exemplo      # out/exemplo.mp4
 npm run compress out/exemplo.mp4 social
 ```
 
-O mix grava `public/audio/mix/{id}.mp3`. Se esse arquivo existir, o Remotion usa ele no lugar das faixas soltas.
+Requisitos: Node.js LTS e ffmpeg/ffprobe no PATH.
 
 ## Licença Remotion
 
